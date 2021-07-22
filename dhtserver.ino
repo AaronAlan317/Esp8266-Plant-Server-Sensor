@@ -1,7 +1,3 @@
-/*********
-  Rui Santos
-  Complete project details at https://randomnerdtutorials.com/esp8266-dht11dht22-temperature-and-humidity-web-server-with-arduino-ide/
-*********/
 
 // Import required libraries
 #include <Arduino.h>
@@ -11,28 +7,30 @@
 #include <ESPAsyncWebServer.h>
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
+
 // Replace with your network credentials
-const char* ssid = "ASUS_40_2G_2.4GEXT";
-const char* password = "hernandez";
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////
+const char* ssid = "*************";
+const char* password = "**************";
+// Pins to be use as the 4 binary selectors 
 const int selectPins[4] = {D3,D2, D1, D0};
+// Input from the mux will be read as input from this pin
 const int analogInput = A0;
+// Stores data from sensors
 int sensorData[15];
-
-const int AirValue = 952;   //you need to replace this value with Value_1
-const int WaterValue = 544;  //you need to replace this value with Value_2
+const int AirValue = 952;   
+const int WaterValue = 544;  
 int soilMoistureValue = 0;
 int soilmoisturepercent=0;
 String stringToReturn;
 int numOfSensors;
+// Stores the names of sensors that are connected
+// Name position corresponds with the data value that is at the same index in sensorData
 char *mySensors[] = {"moisture", "moisture", "photoresistor","photoresistor",
                      "empty", "empty", "empty","empty",
                      "empty", "empty", "empty","empty",
                      "empty", "empty", "empty","empty",
                     };
-
-
+// A mapping of the output values to its corresponding mux value
 /* y0 - 1 - mositure
  * y1 - 9 - temp
  * y2 - 5 
@@ -51,19 +49,10 @@ char *mySensors[] = {"moisture", "moisture", "photoresistor","photoresistor",
  * y15 - 16
  
  */
-//////////////////////////////////////////////
 
-
-
-
-
-
-#define DHTPIN D4     // Digital pin connected to the DHT sensor
-
-// Uncomment the type of sensor in use:
+// Digital pin connected to the DHT sensor
+#define DHTPIN D4     
 #define DHTTYPE    DHT11     // DHT 11
-//#define DHTTYPE    DHT22     // DHT 22 (AM2302)
-//#define DHTTYPE    DHT21     // DHT 21 (AM2301)
 
 DHT dht(DHTPIN, DHTTYPE);
 
@@ -76,78 +65,52 @@ String hum;
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
 
-// Generally, you should use "unsigned long" for variables that hold time
 // The value will quickly become too large for an int to store
 unsigned long previousMillis = 0;    // will store last time DHT was updated
 
 // Updates DHT readings every 10 seconds
 const long interval = 10000;  
 
-/////////////////////////////////////////
-
-
-
-
-
-void setupDHT()
-{
-   // Set up the select pins as outputs:
+// Sets up mux buy init the pins as OUTPUT starting with  HIGH value
+void setupMUX()
+{   // Set up the select pins as outputs:
     for (int i=0; i < 4; i++)
     {
       pinMode(selectPins[i], OUTPUT);
       digitalWrite(selectPins[i], HIGH);
     }
-    
-    // Create header table
-    Serial.println("Y0\tY1\tY2\tY3\tY4\tY5\tY6\tY7");
-    Serial.println("---\t---\t---\t---\t---\t---\t---\t---");
 }
 
-
 int getIndex(char sensorName[]){
-
   int index = 0;
   for (int i = 0; i < 6; i++) {
     if(mySensors[i] == sensorName)
     {
       index = i;
     }
-   
-  }
-
+   }
   return index;
-
 }
 
 int getSensorData(int index){
-
   int data = sensorData[index];
-
   return data;
-
-
-  
 }
-void returnDataVoid(int i){
 
+void returnDataVoid(int i){
       String Name = String(mySensors[i]);
-     
       stringToReturn = String(sensorData[i]);
-     
       Serial.println("Returning senors: ");
       Serial.println(Name);
       Serial.println("With value:");
       Serial.println(stringToReturn);
-      
-      
 }
 
 String returnData(){
   return stringToReturn;
 }
+
 void readSensors(){
- 
-  
   t = readDHT11Temperature();
   h = readDHT11Humidity();
   for (byte pin=0; pin <= 15; pin++)
@@ -157,23 +120,18 @@ void readSensors(){
       for (int i=0; i < 4; i++) {
           digitalWrite(selectPins[i], pin & (1 << i)?HIGH:LOW);
       }
-
       //skips saving data if no senors are assigned
       if(mySensors[pin] == "empty")
       {
          continue;
       }
-
-     
       sensorData[pin] = analogRead(analogInput);
       int inputValue = analogRead(analogInput);
       Serial.print(String(mySensors[pin]) + "\t");
       Serial.print(String(": "));
       Serial.print(String(inputValue));
       Serial.println();
-  
   }
-
   Serial.print(F("%  Temperature: "));
   Serial.print(temp);
   Serial.println();
@@ -182,11 +140,9 @@ void readSensors(){
   Serial.println();
   Serial.println();
 
-  
 }
   
 float readDHT11Temperature() {
-  
   // Read temperature as Celsius (the default)
   float t = dht.readTemperature();
   // Convert temperature to Fahrenheit
@@ -202,7 +158,6 @@ float readDHT11Temperature() {
 }
 
 float readDHT11Humidity() {
- 
   float h = dht.readHumidity();
   if (isnan(h)) {
     Serial.println("Failed to read from DHT11 sensor!");
@@ -218,14 +173,12 @@ void setup(){
   // Serial port for debugging purposes
   Serial.begin(115200);
   dht.begin();
-  setupDHT();
-
+  setupMUX();
   // Initialize SPIFFS
   if(!SPIFFS.begin()){
     Serial.println("An Error has occurred while mounting SPIFFS");
     return;
   }
-  
   // Connect to Wi-Fi
   WiFi.begin(ssid, password);
   Serial.println("Connecting to WiFi");
@@ -233,10 +186,8 @@ void setup(){
     delay(1000);
     Serial.println(".");
   }
-
   // Print ESP8266 Local IP Address
   Serial.println(WiFi.localIP());
-
   // Route for root / web page
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(SPIFFS, "/index.html");
